@@ -41,7 +41,7 @@ import type { PageItem, Pagination } from '../../types';
 const PagesPage: React.FC = () => {
     const navigate = useNavigate();
     const [pages, setPages] = useState<PageItem[]>([]);
-    const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 20, pages: 0 });
+    const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 100, pages: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
@@ -54,7 +54,7 @@ const PagesPage: React.FC = () => {
         async (page = 1, s = search, type = typeFilter, active = activeFilter) => {
             setLoading(true);
             try {
-                const params: Record<string, string | number> = { page, limit: 20 };
+                const params: Record<string, string | number> = { page, limit: 100 };
                 if (s) params.search = s;
                 if (type) params.pageType = type;
                 if (active) params.isActive = active;

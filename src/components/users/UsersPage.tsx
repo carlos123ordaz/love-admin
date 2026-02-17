@@ -34,7 +34,7 @@ import type { User, Pagination } from '../../types';
 const UsersPage: React.FC = () => {
     const navigate = useNavigate();
     const [users, setUsers] = useState<User[]>([]);
-    const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 20, pages: 0 });
+    const [pagination, setPagination] = useState<Pagination>({ total: 0, page: 1, limit: 100, pages: 0 });
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [search, setSearch] = useState('');
@@ -44,7 +44,7 @@ const UsersPage: React.FC = () => {
     const fetchUsers = useCallback(async (page = 1, searchTerm = search, isPro = proFilter) => {
         setLoading(true);
         try {
-            const params: Record<string, string | number> = { page, limit: 20 };
+            const params: Record<string, string | number> = { page, limit: 100 };
             if (searchTerm) params.search = searchTerm;
             if (isPro) params.isPro = isPro;
 

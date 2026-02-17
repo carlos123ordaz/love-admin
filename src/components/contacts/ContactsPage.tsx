@@ -62,7 +62,7 @@ const ContactsPage: React.FC = () => {
         async (page = 1, s = search, status = statusFilter, type = typeFilter) => {
             setLoading(true);
             try {
-                const params: Record<string, string | number> = { page, limit: 20 };
+                const params: Record<string, string | number> = { page, limit: 100 };
                 if (s) params.search = s;
                 if (status) params.status = status;
                 if (type) params.type = type;
@@ -272,7 +272,7 @@ const ContactsPage: React.FC = () => {
                     page={pagination.page - 1}
                     rowsPerPage={pagination.limit}
                     onPageChange={(_, p) => fetchContacts(p + 1, search, statusFilter, typeFilter)}
-                    rowsPerPageOptions={[20]}
+                    rowsPerPageOptions={[100]}
                     labelDisplayedRows={({ from, to, count }) => `${from}-${to} de ${count}`}
                 />
             </Paper>

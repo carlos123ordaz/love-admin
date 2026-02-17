@@ -108,4 +108,12 @@ export const contactsApi = {
     delete: (contactId: string) => api.delete(`/admin/contacts/${contactId}`),
 };
 
+export const adminApi = {
+    getTemplates: () => api.get('/admin/templates'),
+    createTemplate: (data: any) => api.post('/admin/templates', data),
+    updateTemplate: (id: string, data: any) => api.patch(`/admin/templates/${id}`, data),
+    deleteTemplate: (id: string) => api.delete(`/admin/templates/${id}`),
+    toggleTemplate: (id: string) => api.patch(`/admin/templates/${id}/toggle`),
+}
+
 export default api;

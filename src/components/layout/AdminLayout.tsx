@@ -25,6 +25,7 @@ import LogoutIcon from '@mui/icons-material/LogoutRounded';
 import MenuIcon from '@mui/icons-material/MenuRounded';
 import FavoriteIcon from '@mui/icons-material/Favorite';
 import { useAuth } from '../../contexts/AuthContext';
+import { TempleBuddhist } from '@mui/icons-material';
 
 const DRAWER_WIDTH = 260;
 
@@ -33,6 +34,7 @@ const navItems = [
     { label: 'Usuarios', path: '/users', icon: <PeopleIcon /> },
     { label: 'Páginas', path: '/pages', icon: <ArticleIcon /> },
     { label: 'Contactos', path: '/contacts', icon: <MailIcon /> },
+    { label: 'Plantillas', path: '/templates', icon: <TempleBuddhist /> }
 ];
 
 const AdminLayout: React.FC = () => {
