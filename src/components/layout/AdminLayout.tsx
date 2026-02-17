@@ -21,6 +21,7 @@ import DashboardIcon from '@mui/icons-material/DashboardRounded';
 import PeopleIcon from '@mui/icons-material/PeopleRounded';
 import ArticleIcon from '@mui/icons-material/ArticleRounded';
 import MailIcon from '@mui/icons-material/MailRounded';
+import NotificationsIcon from '@mui/icons-material/NotificationsRounded';
 import LogoutIcon from '@mui/icons-material/LogoutRounded';
 import MenuIcon from '@mui/icons-material/MenuRounded';
 import FavoriteIcon from '@mui/icons-material/Favorite';
@@ -34,7 +35,8 @@ const navItems = [
     { label: 'Usuarios', path: '/users', icon: <PeopleIcon /> },
     { label: 'Páginas', path: '/pages', icon: <ArticleIcon /> },
     { label: 'Contactos', path: '/contacts', icon: <MailIcon /> },
-    { label: 'Plantillas', path: '/templates', icon: <TempleBuddhist /> }
+    { label: 'Plantillas', path: '/templates', icon: <TempleBuddhist /> },
+    { label: 'Notificaciones', path: '/notifications', icon: <NotificationsIcon /> },
 ];
 
 const AdminLayout: React.FC = () => {

@@ -106,14 +106,68 @@ export const contactsApi = {
         api.patch<ApiResponse<Contact>>(`/admin/contacts/${contactId}`, data),
 
     delete: (contactId: string) => api.delete(`/admin/contacts/${contactId}`),
+
+    // 🆕 Responder a un contacto (envía notificación al usuario)
+    reply: (contactId: string, data: { replyMessage: string }) =>
+        api.post<ApiResponse<{ contact: Contact; notificationSent: boolean }>>(
+            `/admin/contacts/${contactId}/reply`,
+            data
+        ),
 };
 
+// ==================== NOTIFICATIONS (admin) ====================
+export const notificationsApi = {
+    // Enviar a un usuario específico
+    sendToUser: (data: {
+        userId: string;
+        title: string;
+        message: string;
+        type?: string;
+        icon?: string;
+        actionUrl?: string;
+        actionText?: string;
+        expiresAt?: string;
+    }) => api.post('/notifications/admin/send', data),
+
+    // Broadcast (all, pro, free)
+    broadcast: (data: {
+        audience: 'all' | 'pro' | 'free';
+        title: string;
+        message: string;
+        type?: string;
+        icon?: string;
+        actionUrl?: string;
+        actionText?: string;
+        expiresAt?: string;
+    }) => api.post('/notifications/admin/broadcast', data),
+
+    // Envío bulk a varios usuarios
+    sendBulk: (data: {
+        userIds: string[];
+        title: string;
+        message: string;
+        type?: string;
+        icon?: string;
+    }) => api.post('/notifications/admin/send-bulk', data),
+
+    // Listar todas las notificaciones
+    getAll: (params?: { page?: number; limit?: number; audience?: string; type?: string }) =>
+        api.get('/notifications/admin/all', { params }),
+
+    // Estadísticas
+    getStats: () => api.get('/notifications/admin/stats'),
+
+    // Eliminar
+    delete: (notificationId: string) => api.delete(`/notifications/admin/${notificationId}`),
+};
+
+// ==================== TEMPLATES (admin) ====================
 export const adminApi = {
     getTemplates: () => api.get('/admin/templates'),
     createTemplate: (data: any) => api.post('/admin/templates', data),
     updateTemplate: (id: string, data: any) => api.patch(`/admin/templates/${id}`, data),
     deleteTemplate: (id: string) => api.delete(`/admin/templates/${id}`),
     toggleTemplate: (id: string) => api.patch(`/admin/templates/${id}/toggle`),
-}
+};
 
 export default api;

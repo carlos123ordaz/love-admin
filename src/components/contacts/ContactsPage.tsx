@@ -26,11 +26,18 @@ import {
     DialogContent,
     DialogActions,
     Button,
+    Snackbar,
+    Divider,
 } from '@mui/material';
 import SearchIcon from '@mui/icons-material/SearchRounded';
 import VisibilityIcon from '@mui/icons-material/VisibilityRounded';
 import EditIcon from '@mui/icons-material/EditRounded';
 import DeleteIcon from '@mui/icons-material/DeleteRounded';
+import ReplyIcon from '@mui/icons-material/ReplyRounded';
+import SendIcon from '@mui/icons-material/SendRounded';
+import NotificationsActiveIcon from '@mui/icons-material/NotificationsActiveRounded';
+import CheckCircleIcon from '@mui/icons-material/CheckCircleRounded';
+import PersonIcon from '@mui/icons-material/PersonRounded';
 import { contactsApi } from '../../api';
 import {
     formatDate,
@@ -51,12 +58,24 @@ const ContactsPage: React.FC = () => {
     const [typeFilter, setTypeFilter] = useState('');
     const [searchTimeout, setSearchTimeout] = useState<ReturnType<typeof setTimeout> | null>(null);
 
+    // Snackbar
+    const [snackbar, setSnackbar] = useState<{ open: boolean; message: string; severity: 'success' | 'error' | 'info' }>({
+        open: false,
+        message: '',
+        severity: 'success',
+    });
+
     // Dialogs
     const [viewContact, setViewContact] = useState<Contact | null>(null);
     const [editContact, setEditContact] = useState<Contact | null>(null);
     const [editStatus, setEditStatus] = useState('');
     const [editNotes, setEditNotes] = useState('');
     const [deleteId, setDeleteId] = useState<string | null>(null);
+
+    // 🆕 Reply dialog
+    const [replyContact, setReplyContact] = useState<Contact | null>(null);
+    const [replyMessage, setReplyMessage] = useState('');
+    const [replySending, setReplySending] = useState(false);
 
     const fetchContacts = useCallback(
         async (page = 1, s = search, status = statusFilter, type = typeFilter) => {
@@ -112,6 +131,7 @@ const ContactsPage: React.FC = () => {
                     )
                 );
                 setEditContact(null);
+                setSnackbar({ open: true, message: 'Contacto actualizado', severity: 'success' });
             }
         } catch {
             setError('Error al actualizar contacto');
@@ -125,8 +145,60 @@ const ContactsPage: React.FC = () => {
             setContacts((prev) => prev.filter((c) => c._id !== deleteId));
             setPagination((prev) => ({ ...prev, total: prev.total - 1 }));
             setDeleteId(null);
+            setSnackbar({ open: true, message: 'Contacto eliminado', severity: 'success' });
         } catch {
             setError('Error al eliminar contacto');
+        }
+    };
+
+    // 🆕 Abrir diálogo de respuesta
+    const handleOpenReply = (contact: Contact) => {
+        setReplyContact(contact);
+        setReplyMessage('');
+    };
+
+    // 🆕 Enviar respuesta
+    const handleSendReply = async () => {
+        if (!replyContact || !replyMessage.trim()) return;
+
+        setReplySending(true);
+        try {
+            const { data } = await contactsApi.reply(replyContact._id, {
+                replyMessage: replyMessage.trim(),
+            });
+
+            if (data.success) {
+                // Actualizar el contacto en la lista local
+                setContacts((prev) =>
+                    prev.map((c) =>
+                        c._id === replyContact._id
+                            ? {
+                                ...c,
+                                status: 'resolved' as Contact['status'],
+                                adminReply: replyMessage.trim(),
+                                adminRepliedAt: new Date().toISOString(),
+                            }
+                            : c
+                    )
+                );
+
+                setReplyContact(null);
+                setReplyMessage('');
+
+                const msg = data.data?.notificationSent
+                    ? '✅ Respuesta enviada y notificación entregada al usuario'
+                    : '✅ Respuesta guardada (usuario sin cuenta, no se envió notificación)';
+
+                setSnackbar({ open: true, message: msg, severity: 'success' });
+            }
+        } catch (err: any) {
+            setSnackbar({
+                open: true,
+                message: err.response?.data?.message || 'Error al enviar respuesta',
+                severity: 'error',
+            });
+        } finally {
+            setReplySending(false);
         }
     };
 
@@ -222,13 +294,34 @@ const ContactsPage: React.FC = () => {
                                 contacts.map((c) => (
                                     <TableRow key={c._id} hover sx={{ '&:last-child td': { border: 0 } }}>
                                         <TableCell>
-                                            <Typography variant="body2" fontWeight={600}>{c.name}</Typography>
-                                            <Typography variant="caption" color="text.secondary">{c.email}</Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <Box>
+                                                    <Typography variant="body2" fontWeight={600}>{c.name}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">{c.email}</Typography>
+                                                </Box>
+                                                {/* Indicador si tiene userId (puede recibir notificación) */}
+                                                {(c as any).userId && (
+                                                    <Tooltip title="Usuario registrado — puede recibir notificaciones">
+                                                        <PersonIcon sx={{ fontSize: 14, color: 'primary.main', ml: 0.5 }} />
+                                                    </Tooltip>
+                                                )}
+                                            </Box>
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2" sx={{ maxWidth: 280 }} noWrap>
                                                 {c.subject}
                                             </Typography>
+                                            {/* Indicador de que ya fue respondido */}
+                                            {(c as any).adminReply && (
+                                                <Chip
+                                                    icon={<CheckCircleIcon />}
+                                                    label="Respondido"
+                                                    size="small"
+                                                    color="success"
+                                                    variant="outlined"
+                                                    sx={{ mt: 0.5, height: 20, fontSize: 11 }}
+                                                />
+                                            )}
                                         </TableCell>
                                         <TableCell align="center">
                                             <Chip label={contactTypeLabels[c.type] || c.type} size="small" variant="outlined" />
@@ -246,6 +339,16 @@ const ContactsPage: React.FC = () => {
                                                 <Tooltip title="Ver">
                                                     <IconButton size="small" onClick={() => setViewContact(c)}>
                                                         <VisibilityIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                {/* 🆕 Botón de responder */}
+                                                <Tooltip title="Responder">
+                                                    <IconButton
+                                                        size="small"
+                                                        color="primary"
+                                                        onClick={() => handleOpenReply(c)}
+                                                    >
+                                                        <ReplyIcon fontSize="small" />
                                                     </IconButton>
                                                 </Tooltip>
                                                 <Tooltip title="Editar estado">
@@ -277,7 +380,9 @@ const ContactsPage: React.FC = () => {
                 />
             </Paper>
 
-            {/* View Dialog */}
+            {/* ============================================ */}
+            {/* VIEW Dialog */}
+            {/* ============================================ */}
             <Dialog open={!!viewContact} onClose={() => setViewContact(null)} maxWidth="sm" fullWidth>
                 {viewContact && (
                     <>
@@ -297,6 +402,16 @@ const ContactsPage: React.FC = () => {
                                     <Typography variant="caption" color="text.secondary">De</Typography>
                                     <Typography variant="body2" fontWeight={600}>
                                         {viewContact.name} ({viewContact.email})
+                                        {(viewContact as any).userId && (
+                                            <Chip
+                                                icon={<PersonIcon />}
+                                                label="Registrado"
+                                                size="small"
+                                                color="primary"
+                                                variant="outlined"
+                                                sx={{ ml: 1, height: 22, fontSize: 11 }}
+                                            />
+                                        )}
                                     </Typography>
                                 </Box>
                                 <Box>
@@ -313,6 +428,35 @@ const ContactsPage: React.FC = () => {
                                         {viewContact.message}
                                     </Typography>
                                 </Box>
+
+                                {/* 🆕 Mostrar respuesta si existe */}
+                                {(viewContact as any).adminReply && (
+                                    <>
+                                        <Divider />
+                                        <Box
+                                            sx={{
+                                                p: 2,
+                                                borderRadius: 2,
+                                                bgcolor: 'success.50',
+                                                border: '1px solid',
+                                                borderColor: 'success.200',
+                                            }}
+                                        >
+                                            <Typography variant="caption" color="success.main" fontWeight={600}>
+                                                💬 Respuesta del admin
+                                            </Typography>
+                                            <Typography variant="body2" sx={{ whiteSpace: 'pre-wrap', mt: 0.5 }}>
+                                                {(viewContact as any).adminReply}
+                                            </Typography>
+                                            {(viewContact as any).adminRepliedAt && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                                    Respondido: {formatDateTime((viewContact as any).adminRepliedAt)}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    </>
+                                )}
+
                                 {viewContact.adminNotes && (
                                     <Box>
                                         <Typography variant="caption" color="text.secondary">Notas admin</Typography>
@@ -329,6 +473,21 @@ const ContactsPage: React.FC = () => {
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={() => setViewContact(null)}>Cerrar</Button>
+                            {/* 🆕 Botón responder desde el dialog de ver */}
+                            {!(viewContact as any).adminReply && (
+                                <Button
+                                    variant="contained"
+                                    color="primary"
+                                    startIcon={<ReplyIcon />}
+                                    onClick={() => {
+                                        const contact = viewContact;
+                                        setViewContact(null);
+                                        handleOpenReply(contact);
+                                    }}
+                                >
+                                    Responder
+                                </Button>
+                            )}
                             <Button
                                 variant="outlined"
                                 onClick={() => {
@@ -343,7 +502,120 @@ const ContactsPage: React.FC = () => {
                 )}
             </Dialog>
 
-            {/* Edit Dialog */}
+            {/* ============================================ */}
+            {/* 🆕 REPLY Dialog */}
+            {/* ============================================ */}
+            <Dialog
+                open={!!replyContact}
+                onClose={() => !replySending && setReplyContact(null)}
+                maxWidth="sm"
+                fullWidth
+            >
+                {replyContact && (
+                    <>
+                        <DialogTitle>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                <ReplyIcon color="primary" />
+                                Responder a {replyContact.name}
+                            </Box>
+                        </DialogTitle>
+                        <DialogContent dividers>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                                {/* Contexto del mensaje original */}
+                                <Paper
+                                    variant="outlined"
+                                    sx={{
+                                        p: 2,
+                                        bgcolor: 'grey.50',
+                                        borderLeft: '4px solid',
+                                        borderLeftColor: 'primary.main',
+                                    }}
+                                >
+                                    <Typography variant="caption" color="text.secondary" fontWeight={600}>
+                                        Mensaje original
+                                    </Typography>
+                                    <Typography variant="body2" fontWeight={600} sx={{ mt: 0.5 }}>
+                                        {replyContact.subject}
+                                    </Typography>
+                                    <Typography
+                                        variant="body2"
+                                        color="text.secondary"
+                                        sx={{ mt: 0.5, whiteSpace: 'pre-wrap', maxHeight: 120, overflow: 'auto' }}
+                                    >
+                                        {replyContact.message}
+                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
+                                        De: {replyContact.name} ({replyContact.email}) · {formatDate(replyContact.createdAt)}
+                                    </Typography>
+                                </Paper>
+
+                                {/* Indicador si recibirá notificación */}
+                                {(replyContact as any).userId ? (
+                                    <Alert
+                                        severity="info"
+                                        icon={<NotificationsActiveIcon />}
+                                        sx={{ py: 0.5 }}
+                                    >
+                                        <Typography variant="body2" fontSize={13}>
+                                            El usuario recibirá una <strong>notificación in-app</strong> con tu respuesta
+                                        </Typography>
+                                    </Alert>
+                                ) : (
+                                    <Alert severity="warning" sx={{ py: 0.5 }}>
+                                        <Typography variant="body2" fontSize={13}>
+                                            Este contacto <strong>no tiene cuenta registrada</strong>. La respuesta se guardará pero no se enviará notificación.
+                                        </Typography>
+                                    </Alert>
+                                )}
+
+                                {/* Ya fue respondido anteriormente? */}
+                                {(replyContact as any).adminReply && (
+                                    <Alert severity="success" sx={{ py: 0.5 }}>
+                                        <Typography variant="body2" fontSize={13}>
+                                            Este contacto ya fue respondido. Enviar otra respuesta reemplazará la anterior.
+                                        </Typography>
+                                    </Alert>
+                                )}
+
+                                {/* Campo de respuesta */}
+                                <TextField
+                                    label="Tu respuesta"
+                                    placeholder="Escribe tu respuesta al usuario..."
+                                    multiline
+                                    rows={5}
+                                    value={replyMessage}
+                                    onChange={(e) => setReplyMessage(e.target.value)}
+                                    fullWidth
+                                    autoFocus
+                                    inputProps={{ maxLength: 500 }}
+                                    helperText={`${replyMessage.length}/500 caracteres`}
+                                />
+                            </Box>
+                        </DialogContent>
+                        <DialogActions sx={{ px: 3, py: 2 }}>
+                            <Button
+                                onClick={() => setReplyContact(null)}
+                                disabled={replySending}
+                            >
+                                Cancelar
+                            </Button>
+                            <Button
+                                variant="contained"
+                                color="primary"
+                                startIcon={replySending ? <CircularProgress size={18} color="inherit" /> : <SendIcon />}
+                                onClick={handleSendReply}
+                                disabled={!replyMessage.trim() || replySending}
+                            >
+                                {replySending ? 'Enviando...' : 'Enviar respuesta'}
+                            </Button>
+                        </DialogActions>
+                    </>
+                )}
+            </Dialog>
+
+            {/* ============================================ */}
+            {/* EDIT Dialog */}
+            {/* ============================================ */}
             <Dialog open={!!editContact} onClose={() => setEditContact(null)} maxWidth="sm" fullWidth>
                 {editContact && (
                     <>
@@ -377,7 +649,9 @@ const ContactsPage: React.FC = () => {
                 )}
             </Dialog>
 
-            {/* Delete Dialog */}
+            {/* ============================================ */}
+            {/* DELETE Dialog */}
+            {/* ============================================ */}
             <Dialog open={!!deleteId} onClose={() => setDeleteId(null)}>
                 <DialogTitle>Confirmar eliminación</DialogTitle>
                 <DialogContent>
@@ -388,6 +662,25 @@ const ContactsPage: React.FC = () => {
                     <Button color="error" variant="contained" onClick={handleDelete}>Eliminar</Button>
                 </DialogActions>
             </Dialog>
+
+            {/* ============================================ */}
+            {/* Snackbar (feedback) */}
+            {/* ============================================ */}
+            <Snackbar
+                open={snackbar.open}
+                autoHideDuration={5000}
+                onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+                anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+            >
+                <Alert
+                    onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+                    severity={snackbar.severity}
+                    variant="filled"
+                    sx={{ width: '100%' }}
+                >
+                    {snackbar.message}
+                </Alert>
+            </Snackbar>
         </Box>
     );
 };

@@ -13,6 +13,7 @@ import PageDetailPage from './components/pages/PageDetailPage';
 import ContactsPage from './components/contacts/ContactsPage';
 import { Box, CircularProgress } from '@mui/material';
 import AdminTemplatesPage from './components/templates/AdminTemplatesPage';
+import AdminNotificationsPage from './components/notifications/AdminNotificationsPage';
 
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { dbUser, loading } = useAuth();
@@ -85,6 +86,7 @@ const AppRoutes: React.FC = () => (
       <Route path="pages/:pageId" element={<PageDetailPage />} />
       <Route path="contacts" element={<ContactsPage />} />
       <Route path="templates" element={<AdminTemplatesPage />} />
+      <Route path="notifications" element={<AdminNotificationsPage />} />
     </Route>
     <Route path="*" element={<Navigate to="/" replace />} />
   </Routes>
